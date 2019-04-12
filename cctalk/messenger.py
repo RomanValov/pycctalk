@@ -12,7 +12,12 @@ __all__ = __autodoc__
 
 import time
 
-from . tools import make_serial_object, make_msg, send_message_and_get_reply
+from . tools import make_serial_object, send_message_and_get_reply, conv_reply
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 class CCMessenger(object):
     """This is an object used to talk with ccTalk device.
@@ -74,36 +79,37 @@ class CCMessenger(object):
 
     def _request(self, request, message):
 
-        def __func(data=None, verbose=None, supress=None, request=request):
+        def __func(data=None, verbose=None, suppress=None, request=request):
             if verbose is None:
                 verbose = self.verbose
 
-            if supress is None:
-                supress = self.supress
+            if suppress is None:
+                suppress = self.suppress
 
-            ph = dict(
-                request_code=message[0],
-                bytes_expected=message[1],
-                type_returned=message[2],
-                user_message=request,
-            )
+            if data is None:
+                data = ''
+
+            code, expect_body, return_type = message
 
             if verbose:
-                print('Requesting: {0} {1}'.format(request, data))
+                print('Request: {0} {1}'.format(request, list(data)))
 
             try:
-                reply_msg = send_message_and_get_reply(self.serial_object, ph, data, verbose)
-            except Exception as e:
-                if not supress:
+                head, body = send_message_and_get_reply(self.serial_object, code, data, verbose=int(verbose))
+            except IOError as e:
+                if not suppress:
                     raise
                 else:
                     return None
 
-            return reply_msg
+            if verbose:
+                print('Reply: {0} {1}'.format(head, list(body)))
+
+            return conv_reply(head, body, expect_body, return_type)
 
         return __func
     
-    def __init__(self, serial_object, verbose=False, supress=False):
+    def __init__(self, serial_object, verbose=False, suppress=False):
         if isinstance(serial_object, basestring):
             self.serial_object = make_serial_object(serial_object)
         else:
@@ -114,7 +120,7 @@ class CCMessenger(object):
         }
 
         self.verbose = verbose
-        self.supress = supress
+        self.suppress = suppress
 
     def accept_coins(self, mask=[255,255]):
         if len(mask) != 2:
@@ -139,7 +145,7 @@ class CCMessenger(object):
         return self.requests['coin_id']([slot])
 
     def modify_coin_id(self, slot, text):
-        text_raw = list(map(ord,'{:.<6}'.format(text)))
+        text_raw = list(bytearray('{:.<6}'.format(text).encode()))
         return self.requests['modify_coin_id']([slot] + text_raw)
 
     def teach_mode_control(self, slot):

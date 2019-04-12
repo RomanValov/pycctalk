@@ -13,7 +13,7 @@ __copyright__ = license_text
 from cctalk.messenger import CCMessenger
 import time
 
-cc_messenger = CCMessenger('/dev/ttyUSB0', verbose=False)
+cc_messenger = CCMessenger('/dev/ttyUSB0', verbose=0)
 
 def test_iface(cc_messenger):
     error = 0
@@ -41,7 +41,7 @@ def test_iface(cc_messenger):
 
     try:
         cc_messenger('simple_poll')
-    except NotImplementedError:
+    except Exception:
         print('\tFAIL\t("simple_poll")')
         error = True
     else:
@@ -60,7 +60,7 @@ def test_iface(cc_messenger):
 
     try:
         cc_messenger.request('simple_poll')
-    except NotImplementedError:
+    except Exception:
         print('\tFAIL\t.request("simple_poll")')
         error = True
     else:
@@ -141,15 +141,18 @@ def dump_coins(cc_messenger):
         spath = cc_messenger.sorter_path([_])
         pmask = cc_messenger.coin_position([_])
 
-        print('\t%s:\t%s\t%s\t%s' % (_, idstr, spath, pmask))
+        print('\t%2s:\t%s\t%s\t%s' % (_, idstr, spath, pmask))
     print()
 
     return coins
 
 
+cc_messenger.modify_coin_id(8, 'MYCOIN')
+
 test_iface(cc_messenger)
 dump_about(cc_messenger)
 dump_state(cc_messenger)
+
 coins = dump_coins(cc_messenger)
 
 print('reset:', cc_messenger.reset_device(), cc_messenger.master_inhibit(False), cc_messenger.accept_coins())

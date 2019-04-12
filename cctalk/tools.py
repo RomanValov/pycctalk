@@ -18,26 +18,8 @@ import time
 import subprocess
 from struct import unpack
 
-def make_msg(code, data=None, to_slave_addr=2, from_host_addr=1):
-    """Makes a ccTalk message from a ccTalk code and data to be sent with this message.
 
-    Parameters
-    ----------
-    code : int
-      ccTalk code for this message.
-    data : list of integers
-      Data to be sent in this message.
-    to_slave_addr : int
-      Address of slave to be sent to.  Defaults to 2.
-    from_host_addr : int
-      Address of host that is sending the message.  Defaults to 1.
-
-    Returns
-    -------
-    message : list of integers
-      An integer equivalent of the ccTalk message.
-      This needs to be converted to a byte message prior to sending.
-    """
+def make_msg(code, data=None, to_slave_addr=None, from_host_addr=None):
     if not data:
         seq = [to_slave_addr, 0, from_host_addr, code]
     else:
@@ -49,93 +31,90 @@ def make_msg(code, data=None, to_slave_addr=2, from_host_addr=1):
     message = seq + [end_byte]
     return message
 
-def read_message(serial_object):
-    serial_object.timeout = 1
-    serial_object.inter_byte_timeout = 0.1 # should be 0.05 but linux doesn't support it
 
-    header = serial_object.read(4)
-    if len(header)<4:
-        return False
+def _write_message(serial_object, message, data, slave, host, verbose):
+    data = bytearray(make_msg(message, data, slave, host))
+    data_length = len(data)
+
+    if verbose > 1:
+        print("Send {0} bytes: {1}".format(len(data), list(data)))
+
+    sent = serial_object.write(data)
+
+    if sent != data_length:
+        raise IOError("Sent only {0} bytes of total {1} bytes.".format(sent, data_length))
+
+    echo = bytearray(serial_object.read(sent))
+
+    if verbose > 2:
+        print("Echo {0} bytes: {1}".format(len(echo), list(echo)))
+
+    if not echo == data:
+        raise IOError("Unexpected echo output.")
+
+    return sent
+
+
+def _read_message(serial_object, slave, host, verbose):
+
+    head = bytearray(serial_object.read(4))
 
     # header: destination, length, source, message_id
 
-    message_length = ord(header[1])+1
-    body = serial_object.read(message_length)
+    try:
+        read_length = head[1]+1
+    except IndexError:
+        read_length = 0
 
-    if len(body)<message_length:
-        return False
+    body = bytearray(serial_object.read(read_length))
+    recv = head + body
 
-    reply = list(map(ord,header+body))
+    if verbose > 1:
+        print("Recv {0} bytes: {1}".format(len(recv), list(recv)))
+
+    if len(recv) < 5:
+        return IOError("Reply head is too short.")
+
+    if head[0] != host or head[2] != slave:
+        raise IOError("Unexpected addresses.")
+
+    if len(body) < read_length:
+        return IOError("Reply body is too short.")
 
     # TODO: check checksum
 
-    return reply
+    return head[3], body[:-1]
 
 
-def send_message_and_get_reply(serial_object, message, data=None, verbose=False):
-    """Sends a message and gets a reply.
-
-    Parameters
-    ----------
-    serial_object : object made with :py:func:`cctalk.tools.make_serial_object`
-      Serial communication object.
-    message : Holder
-      Holder containing the message and extended information about the message being send.
-    verbose : bool
-      Flag to be more verbose.
-
-    Returns
-    -------
-    reply_msg : message recieved from :py:func:`cctalk.tools.interpret_reply`
-      if reply_msg is False, no reply was obtained.
-
-    Raises
-    ------
-    UserWarning
-      If a reply was obtained but :py:func:`cctalk.tools.interpret_reply` returned False.
-    """
-
+def send_message_and_get_reply(serial_object, code, data=None, slave=2, host=1, verbose=False):
     if not serial_object.isOpen():
-        msg = 'The serial port is not open.'
-        raise UserWarning(msg, (serial_object.isOpen()))
+        raise RuntimeError("The serial port is not open.")
 
-    packet = ''.join(map(chr,make_msg(message['request_code'], data)))
+    serial_object.timeout = 1
+    serial_object.inter_byte_timeout = 0.1 # should be 0.05 but linux doesn't support it
     serial_object.reset_input_buffer()
     serial_object.reset_output_buffer()
 
-    serial_object.write(packet)
+    # send
+    sent = _write_message(serial_object, code, data, slave, host, verbose)
 
-    output = read_message(serial_object)
-    reply = read_message(serial_object)
+    # recv
+    return _read_message(serial_object, slave, host, verbose)
 
-    if not reply or reply[0] != 1:
-        return False 
+def conv_reply(head, body, expect_body, return_type):
+    if expect_body != -1 and len(body) != expect_body:
+        raise ValueError("Received {0} bytes but expected {1} bytes".format(len(body), expect_body))
+    if return_type is not bool and head:
+        raise ValueError("Device error: {0}.".format(head))
 
-    reply_length = reply[1]
-    expected_length = message['bytes_expected']
-    reply_type = message['type_returned']
-
-    if len(reply) < 2:
-        print('Recieved small message: {0}'.format(reply))
-        return False
-
-    if verbose:
-        print("Recieved {0} bytes:".format(len(reply)))
-
-    if expected_length != -1 and reply_length != expected_length:
-        print('Expected {1} bytes but received {0}'.format(reply_length, expected_length))
-        return False
-
-    reply_data = reply[4:-1]
-    
-    if reply_type is str:
-        return str().join(map(chr,reply_data))
-    elif reply_type is int:
-        return reply_data
-    elif reply_type is bool:
-        return True
+    if return_type is str:
+        return body.decode()
+    elif return_type is int:
+        return list(body)
+    elif return_type is bool:
+        return not bool(head)
     else:
-        return list(map(chr,reply))
+        return return_type(recv)
 
 def make_serial_object(tty_port):
     """Makes a serial object that can be used for talking with the ccTalk device.

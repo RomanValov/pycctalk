@@ -1,4 +1,4 @@
-from .. cc_messenger import CCMessenger
+from .. messenger import CCMessenger
 from .. import tools
 
 def test_creation():
