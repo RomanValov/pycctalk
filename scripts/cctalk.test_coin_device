@@ -1,0 +1,18 @@
+#!/usr/bin/python
+# -*- mode: python -*-
+
+from __future__ import print_function
+
+"""
+Script to demonstrate coin device functions.
+"""
+# The python-cctalk package allows one to send ccTalk messages and decode replies from a ccTalk device.
+license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
+__copyright__ = license_text
+
+from cctalk.devices import CoinDevice
+
+coin_device = CoinDevice('/dev/ttyUSB0')
+
+for index, value, label, error in coin_device:
+    print('index = %4s / value = %4s / label = %6s / error = %4s' % (index, value, label, error))

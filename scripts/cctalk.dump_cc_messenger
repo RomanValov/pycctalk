@@ -130,8 +130,6 @@ def dump_state(cc_messenger):
     print()
 
 def dump_coins(cc_messenger):
-    coins = [0] * 17
-
     print('coins:')
     for _ in range(1,17):
         idstr = cc_messenger.coin_id(_, verbose=verbose_coin_id)
@@ -139,52 +137,16 @@ def dump_coins(cc_messenger):
         idval = idstr[2:5]
         idrev = idstr[5]
 
-        if idcur != 'TK':
-            coins[_] = idval
-
         spath = cc_messenger.sorter_path([_])
         pmask = cc_messenger.coin_position([_])
 
         print('\t%2s:\t%s\t%s\t%s' % (_, idstr, spath, pmask))
     print()
 
-    return coins
-
 
 test_iface(cc_messenger)
 dump_about(cc_messenger)
 dump_state(cc_messenger)
+dump_coins(cc_messenger)
 
 cc_messenger.modify_coin_id(8, 'MYCOIN', verbose=verbose_coin_id)
-coins = dump_coins(cc_messenger)
-
-print('reset:', cc_messenger.reset_device(), cc_messenger.master_inhibit(False), cc_messenger.accept_coins())
-
-last_event = 0
-capa_event = 5
-
-while True:
-    time.sleep(0.1)
-
-    buff_event = cc_messenger.read_buffer()
-    coin_event = buff_event.pop(0)
-
-    if last_event > coin_event:
-        last_event -= 255
-
-    last_index = coin_event - last_event
-    if last_index > capa_event:
-        last_index = capa_event
-
-    if not last_index:
-        continue
-
-    for _ in range(last_index, 0, -1):
-        coin_index = coin_event - _ + 1
-        coin_value = buff_event[2*_-2]
-        coin_error = buff_event[2*_-1]
-        coin_label = coins[coin_value]
-
-        print('index = %4s / value = %4s / label = %6s / error = %4s' % (coin_index, coin_value, coin_label, coin_error))
-
-    last_event = coin_event
