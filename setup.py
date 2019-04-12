@@ -1,7 +1,7 @@
 # Setup file to distribute cctalk package using distutils.
 #
-# The python-cctalk package allows one to send ccTalk messages and decode replies from a coin validator. 
-license_text = "(C) 2011 David Schryer GNU GPLv3 or later."
+# The python-cctalk package allows one to send ccTalk messages and decode replies from a ccTalk device.
+license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
 __copyright__ = license_text
 
 import os

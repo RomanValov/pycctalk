@@ -3,8 +3,8 @@
 Module content
 --------------
 """
-# The python-cctalk package allows one to send ccTalk messages and decode replies from a coin validator. 
-license_text = "(C) 2011 David Schryer GNU GPLv3 or later."
+# The python-cctalk package allows one to send ccTalk messages and decode replies from a ccTalk device.
+license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
 __copyright__ = license_text
 
 __autodoc__ = ['make_serial_object', 'drop_to_ipython', 'make_msg', 'send_message_and_get_reply', 'interpret_reply']
@@ -72,7 +72,7 @@ def read_message(serial_object):
     return reply
 
 
-def send_message_and_get_reply(serial_object, message, verbose=False):
+def send_message_and_get_reply(serial_object, message, data=None, verbose=False):
     """Sends a message and gets a reply.
 
     Parameters
@@ -81,7 +81,6 @@ def send_message_and_get_reply(serial_object, message, verbose=False):
       Serial communication object.
     message : Holder
       Holder containing the message and extended information about the message being send.
-      See :py:class:`cctalk.coin_messenger.CoinMessenger` for Holder construction.
     verbose : bool
       Flag to be more verbose.
 
@@ -100,7 +99,7 @@ def send_message_and_get_reply(serial_object, message, verbose=False):
         msg = 'The serial port is not open.'
         raise UserWarning(msg, (serial_object.isOpen()))
 
-    packet = ''.join(map(chr,message['message']))
+    packet = ''.join(map(chr,make_msg(message['request_code'], data)))
     serial_object.reset_input_buffer()
     serial_object.reset_output_buffer()
 
@@ -121,7 +120,7 @@ def send_message_and_get_reply(serial_object, message, verbose=False):
         return False
 
     if verbose:
-        print("Recieved {0} bytes:".format(msg_length))
+        print("Recieved {0} bytes:".format(len(reply)))
 
     if expected_length != -1 and reply_length != expected_length:
         print('Expected {1} bytes but received {0}'.format(reply_length, expected_length))
@@ -139,7 +138,7 @@ def send_message_and_get_reply(serial_object, message, verbose=False):
         return list(map(chr,reply))
 
 def make_serial_object(tty_port):
-    """Makes a serial object that can be used for talking with the coin validator.
+    """Makes a serial object that can be used for talking with the ccTalk device.
 
     port_type is a string that can currently only be equal to 'coin_validator'.
 
@@ -158,7 +157,6 @@ def make_serial_object(tty_port):
                          parity=serial.PARITY_NONE,
                          stopbits=serial.STOPBITS_ONE,
                          bytesize=serial.EIGHTBITS,
-                         xonxoff=True,
                          )
 
 def drop_to_ipython(local_variables, *variables_to_inspect):

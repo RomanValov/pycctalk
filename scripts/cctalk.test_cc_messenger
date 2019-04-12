@@ -1,0 +1,189 @@
+#!/usr/bin/python
+# -*- mode: python -*-
+
+from __future__ import print_function
+
+"""
+Script to demonstrate cc_messenger functions.
+"""
+# The python-cctalk package allows one to send ccTalk messages and decode replies from a ccTalk device.
+license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
+__copyright__ = license_text
+
+from cctalk.messenger import CCMessenger
+import time
+
+cc_messenger = CCMessenger('/dev/ttyUSB0', verbose=False)
+
+def test_iface(cc_messenger):
+    error = 0
+
+    print('iface:')
+
+    try:
+        cc_messenger.simple_poll()
+    except Exception:
+        print('\tFAIL\t.simple_poll')
+        error = True
+    else:
+        print('\tOKAY\t.simple_poll')
+
+    try:
+        cc_messenger.reset_device_()
+    except NotImplementedError:
+        print('\tOKAY\t.simple_poll_()')
+    except Exception:
+        print('\tFAIL\t.simple_poll_()')
+        error = True
+    else:
+        print('\tFAIL\t.simple_poll_()')
+        error = True
+
+    try:
+        cc_messenger('simple_poll')
+    except NotImplementedError:
+        print('\tFAIL\t("simple_poll")')
+        error = True
+    else:
+        print('\tOKAY\t("simple_poll")')
+
+    try:
+        cc_messenger('simple_poll_')
+    except NotImplementedError:
+        print('\tOKAY\t("simple_poll_")')
+    except Exception:
+        print('\tFAIL\t("simple_poll_")')
+        error = True
+    else:
+        print('\tFAIL\t("simple_poll_")')
+        error = True
+
+    try:
+        cc_messenger.request('simple_poll')
+    except NotImplementedError:
+        print('\tFAIL\t.request("simple_poll")')
+        error = True
+    else:
+        print('\tOKAY\t.request("simple_poll")')
+
+    try:
+        cc_messenger.request('simple_poll_')
+    except NotImplementedError:
+        print('\tOKAY\t.request("simple_poll_")')
+    except Exception:
+        print('\tFAIL\t.request("simple_poll_")')
+        error = True
+    else:
+        print('\tFAIL\t.request("simple_poll_")')
+        error = True
+
+    print()
+
+    if error:
+        raise Exception()
+
+def dump_about(cc_messenger):
+    print('about:')
+    print('\tmanufacturer id:', cc_messenger.manufacturer_id())
+    print('\tequipment type:', cc_messenger.equipment_category())
+    print('\tproduct type:', cc_messenger.product_type())
+    print('\tdatabase version:', cc_messenger.database_version())
+    print('\tserial number:', cc_messenger.serial_number())
+    print('\tsoftware revision:', cc_messenger.software_revision())
+    print('\toption flags:', cc_messenger.option_flags())
+    print('\tdata storage availability:', cc_messenger.data_storage_availability())
+    print('\tcomms revision:', cc_messenger.comms_revision())
+    print('\tbase year:', cc_messenger.base_year())
+    print('\taddress mode:', cc_messenger.address_mode())
+    print('\tbuild code:', cc_messenger.build_code())
+    print('\tcreation date:', cc_messenger.creation_date())
+    print('\tmodification date:', cc_messenger.modification_date())
+    print('\trom checksum:', cc_messenger.rom_checksum())
+    print('\tpolling priority:', cc_messenger.polling_priority())
+    print('\tvariables:', cc_messenger.variable_set())
+    print()
+
+def dump_state(cc_messenger):
+    print('state:')
+    print('\tstatus:', cc_messenger.status())
+    print('\ttest solenoids:', cc_messenger.test_solenoids([255]))
+    print('\ttest output lines:', cc_messenger.test_output_lines([255]))
+    print('\tread input lines:', cc_messenger.read_input_lines())
+    print('\tread opto states:', cc_messenger.read_opto_states())
+    print('\tlatch output lines:', cc_messenger.latch_output_lines([255]))
+    print('\tperform self check:', cc_messenger.perform_self_check())
+    print('\tinhbit status:', cc_messenger.inhibit_status())
+    print('\tmaster inhibit status:', cc_messenger.master_inhibit_status())
+    print('\tinsertion counter:', cc_messenger.insertion_counter())
+    print('\taccept counter:', cc_messenger.accept_counter())
+    print('\tsorter override status:', cc_messenger.sorter_override_status())
+    print('\tteach status:', cc_messenger.teach_status())
+    print('\treject counter:', cc_messenger.reject_counter())
+    print('\tfraud counter:', cc_messenger.fraud_counter())
+    print('\tthermistor:', cc_messenger.thermistor())
+    print('\tcoin precision:', cc_messenger.expansion_0([4]))
+    print('\tcomm status vars:', cc_messenger.comm_status_vars())
+    print()
+
+def dump_coins(cc_messenger):
+    coins = [0] * 17
+
+    print('coins:')
+    for _ in range(1,17):
+        idstr = cc_messenger.coin_id(_)
+        idcur = idstr[:2]
+        idval = idstr[2:5]
+        idrev = idstr[5]
+
+        if idcur != 'TK':
+            coins[_] = idval
+
+        spath = cc_messenger.sorter_path([_])
+        pmask = cc_messenger.coin_position([_])
+
+        print('\t%s:\t%s\t%s\t%s' % (_, idstr, spath, pmask))
+    print()
+
+    return coins
+
+
+test_iface(cc_messenger)
+dump_about(cc_messenger)
+dump_state(cc_messenger)
+coins = dump_coins(cc_messenger)
+
+print('reset:', cc_messenger.reset_device(), cc_messenger.master_inhibit(False), cc_messenger.accept_coins())
+
+last_event = 0
+capa_event = 5
+
+while True:
+    time.sleep(0.1)
+    if not cc_messenger.simple_poll():
+        raise Exception()
+
+    buff_event = cc_messenger.read_buffer()
+    if not buff_event:
+        raise Exception()
+    coin_event = buff_event.pop(0)
+
+    # is it stable?
+    if last_event > coin_event:
+        last_event -= 255
+
+    last_index = coin_event - last_event
+    if last_index > capa_event:
+        last_index = capa_event
+
+    if not last_index:
+        continue
+
+    for _ in range(last_index, 0, -1):
+        coin_index = coin_event - _ + 1
+        coin_value = buff_event[2*_-2]
+        coin_error = buff_event[2*_-1]
+        coin_label = coins[coin_value]
+
+        print('index = %4s / value = %4s / label = %6s / error = %4s' % (coin_index, coin_value, coin_label, coin_error))
+
+    last_event = coin_event

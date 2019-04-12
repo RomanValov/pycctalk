@@ -1,5 +1,8 @@
-The python-cctalk package allows one to send ccTalk messages and decode replies from a coin validator. 
-Copyright (C) 2011 David Schryer
+The python-cctalk package allows one to send ccTalk messages and decode replies from a ccTalk device.
+
+Copyright (C) 2011-2013 David Schryer
+          (C) 2017 James Churchill
+          (C) 2019 Roman Valov
 
 All the code in this project is free software: you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
