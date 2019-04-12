@@ -10,8 +10,6 @@ __copyright__ = license_text
 __autodoc__ = ['make_serial_object', 'drop_to_ipython', 'make_msg', 'send_message_and_get_reply', 'interpret_reply']
 __all__ = __autodoc__
 
-from IPython.terminal.embed import InteractiveShellEmbed
-
 import os
 import serial
 import time
@@ -149,6 +147,8 @@ def drop_to_ipython(local_variables, *variables_to_inspect):
     variables_to_inspect: tuple
       All variables passed to this routine are wrapped into a tuple.
     '''
+
+    from IPython.terminal.embed import InteractiveShellEmbed
 
     try:
         call_name = local_variables['self'].__module__
