@@ -13,7 +13,11 @@ __copyright__ = license_text
 from cctalk.messenger import CCMessenger
 import time
 
-cc_messenger = CCMessenger('/dev/ttyUSB0', verbose=0)
+# verbosity levels up to 3
+verbose_coin_id=0
+verbose_default=0
+
+cc_messenger = CCMessenger('/dev/ttyUSB0', verbose=verbose_default)
 
 def test_iface(cc_messenger):
     error = 0
@@ -130,7 +134,7 @@ def dump_coins(cc_messenger):
 
     print('coins:')
     for _ in range(1,17):
-        idstr = cc_messenger.coin_id(_)
+        idstr = cc_messenger.coin_id(_, verbose=verbose_coin_id)
         idcur = idstr[:2]
         idval = idstr[2:5]
         idrev = idstr[5]
@@ -147,12 +151,11 @@ def dump_coins(cc_messenger):
     return coins
 
 
-cc_messenger.modify_coin_id(8, 'MYCOIN')
-
 test_iface(cc_messenger)
 dump_about(cc_messenger)
 dump_state(cc_messenger)
 
+cc_messenger.modify_coin_id(8, 'MYCOIN', verbose=verbose_coin_id)
 coins = dump_coins(cc_messenger)
 
 print('reset:', cc_messenger.reset_device(), cc_messenger.master_inhibit(False), cc_messenger.accept_coins())
@@ -162,15 +165,10 @@ capa_event = 5
 
 while True:
     time.sleep(0.1)
-    if not cc_messenger.simple_poll():
-        raise Exception()
 
     buff_event = cc_messenger.read_buffer()
-    if not buff_event:
-        raise Exception()
     coin_event = buff_event.pop(0)
 
-    # is it stable?
     if last_event > coin_event:
         last_event -= 255
 

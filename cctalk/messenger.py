@@ -79,7 +79,7 @@ class CCMessenger(object):
 
     def _request(self, request, message):
 
-        def __func(data=None, verbose=None, suppress=None, request=request):
+        def __func(data=None, verbose=None, suppress=None):
             if verbose is None:
                 verbose = self.verbose
 
@@ -87,9 +87,9 @@ class CCMessenger(object):
                 suppress = self.suppress
 
             if data is None:
-                data = ''
+                data = []
 
-            code, expect_body, return_type = message
+            code, expect_body, return_type = message[:3]
 
             if verbose:
                 print('Request: {0} {1}'.format(request, list(data)))
@@ -122,34 +122,34 @@ class CCMessenger(object):
         self.verbose = verbose
         self.suppress = suppress
 
-    def accept_coins(self, mask=[255,255]):
+    def accept_coins(self, mask=[255,255], **kwargs):
         if len(mask) != 2:
             raise Exception("accept_coins mask must be a 2-ple.")
 
-        return self('modify_inhibit_status', mask)
+        return self.requests['modify_inhibit_status'](mask, **kwargs)
 
-    def master_inhibit(self, state=True):
+    def master_inhibit(self, state=True, **kwargs):
         param = int(not state)
-        return self.requests['modify_master_inhibit_status']([param])
+        return self.requests['modify_master_inhibit_status']([param], **kwargs)
 
-    def set_accept_limit(self, coins=1):
+    def set_accept_limit(self, coins=1, **kwargs):
         if not isinstance(coins, int):
             raise Exception("The number of coins must be an integer.")
 
-        return self.requests['set_accept_limit']([coins])
+        return self.requests['set_accept_limit']([coins], **kwargs)
 
-    def read_buffer(self):
-        return self.requests['read_buffered_credit_or_error_codes']()
+    def read_buffer(self, **kwargs):
+        return self.requests['read_buffered_credit_or_error_codes'](**kwargs)
 
-    def coin_id(self, slot):
-        return self.requests['coin_id']([slot])
+    def coin_id(self, slot, **kwargs):
+        return self.requests['coin_id']([slot], **kwargs)
 
-    def modify_coin_id(self, slot, text):
+    def modify_coin_id(self, slot, text, **kwargs):
         text_raw = list(bytearray('{:.<6}'.format(text).encode()))
-        return self.requests['modify_coin_id']([slot] + text_raw)
+        return self.requests['modify_coin_id']([slot] + text_raw, **kwargs)
 
-    def teach_mode_control(self, slot):
-        return self.requests['teach_mode_control']([slot])
+    def teach_mode_control(self, slot, **kwargs):
+        return self.requests['teach_mode_control']([slot], **kwargs)
 
     def __iter__(self):
         return iter(self.requests)
@@ -166,8 +166,8 @@ class CCMessenger(object):
     def __getitem__(self, request):
         return self.__getattr__(request)
 
-    def __call__(self, request, data=None):
-        return self[request](data)
+    def __call__(self, request, data=None, **kwargs):
+        return self[request](data, **kwargs)
 
-    def request(self, request, data=None):
-        return self(request, data)
+    def request(self, request, data=None, **kwargs):
+        return self(request, data, **kwargs)
