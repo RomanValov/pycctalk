@@ -14,5 +14,8 @@ from cctalk.devices import CoinDevice
 
 coin_device = CoinDevice('/dev/ttyUSB0')
 
+# use worths dict to translate coin labels in worths values and mask other coins
+#coin_device = CoinDevice('/dev/ttyUSB0', worths={'AU100A': 100, 'AU200A': 200})
+
 for coin in coin_device:
-    print('index = %4s / value = %4s / label = %6s / error = %4s' % (coin.index, coin.value, coin.label, coin.error))
+    print('index = %4s / value = %4s / worth = %6s / error = %4s' % (coin.index, coin.value, coin.worth, coin.error))

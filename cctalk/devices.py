@@ -11,23 +11,43 @@ import time
 from cctalk.messenger import CCMessenger
 
 
-CoinStruct = namedtuple('CoinStruct', ['index', 'value', 'label', 'error'])
+CoinStruct = namedtuple('CoinStruct', ['index', 'value', 'worth', 'error'])
 
 
 class CoinDevice(object):
-    def __init__(self, serial_object, timeout=0.1, verbose=0, suppress=None):
-        self.cc_messenger = CCMessenger(serial_object, verbose, suppress)
+    def __init__(self, serial_object, worths=None, timeout=0.1, verbose=0, suppress=None):
+        self.cc_messenger = CCMessenger(serial_object, verbose=verbose, suppress=suppress)
         self.timeout = timeout
 
-        self.coin_id = [0] * 17
+        self.worths = worths
+        self.values = dict()
 
+        self.pmasks = []
         for _ in range(1,17):
-            self.coin_id[_] = self.cc_messenger.coin_id(_)
+            label = self.cc_messenger.coin_id(_)
+
+            if self.worths is None:
+                worth = label
+            else:
+                worth = self.worths.get(label, None)
+
+            if worth:
+                self.pmasks.append(self.cc_messenger.coin_position([_]))
+                self.values[_] = worth
+
+        # assuming coin positions are orthogonal sum is `or`-equivalent
+        # also reversing pmask probably due to emp-specific order issue
+        self.pmask = list(reversed([sum(_) for _ in zip(*self.pmasks)]))
+
+    def __call__(self):
+        self.cc_messenger.reset_device()
+        self.cc_messenger.master_inhibit(False)
+        self.cc_messenger.accept_coins(self.pmask)
 
     def __iter__(self):
         self.cc_messenger.reset_device()
         self.cc_messenger.master_inhibit(False)
-        self.cc_messenger.accept_coins()
+        self.cc_messenger.accept_coins(self.pmask)
 
         last_event = 0
         capa_event = 5
@@ -52,13 +72,17 @@ class CoinDevice(object):
                 coin_index = coin_event - _ + 1
                 coin_value = buff_event[2*_-2]
                 coin_error = buff_event[2*_-1]
-                coin_label = self.coin_id[coin_value]
+
+                if coin_value:
+                    coin_worth = self.values[coin_value]
+                else:
+                    coin_worth = ''
 
                 yield CoinStruct(
                     coin_index,
                     coin_value,
-                    coin_label,
-                    coin_error
+                    coin_worth,
+                    coin_error,
                 )
 
             last_event = coin_event

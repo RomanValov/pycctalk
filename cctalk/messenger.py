@@ -79,7 +79,7 @@ class CCMessenger(object):
 
     def _request(self, request, message):
 
-        def __func(data=None, verbose=0, suppress=None):
+        def __func(data=None, verbose=None, suppress=None):
             if verbose is None:
                 verbose = self.verbose
 
