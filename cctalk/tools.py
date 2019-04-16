@@ -71,13 +71,13 @@ def _read_message(serial_object, slave, host, verbose):
         print("Recv {0} bytes: {1}".format(len(recv), list(recv)))
 
     if len(recv) < 5:
-        return IOError("Reply head is too short.")
+        raise IOError("Reply head is too short.")
 
     if head[0] != host or head[2] != slave:
         raise IOError("Unexpected addresses.")
 
     if len(body) < read_length:
-        return IOError("Reply body is too short.")
+        raise IOError("Reply body is too short.")
 
     # TODO: check checksum
 

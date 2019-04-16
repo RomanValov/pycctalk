@@ -38,12 +38,18 @@ if not sys.stdin.isatty():
 
 coin_device = CoinDevice(device_name, worths=(coin_worths or None))
 
-for coin in coin_device:
-    sys.stdout.write(format_spec.format(
-        i=coin.index,
-        v=coin.value,
-        w=coin.worth,
-        e=coin.error,
-    ))
-    sys.stdout.write('\n')
-    sys.stdout.flush()
+while coin_device:
+    for coin in coin_device:
+        sys.stdout.write(format_spec.format(
+            i=coin.index,
+            v=coin.value,
+            w=coin.worth,
+            e=coin.error,
+        ))
+        sys.stdout.write('\n')
+        sys.stdout.flush()
+
+        if coin.error:
+            break
+
+    #sys.stderr.write('ERROR: {}\n'.format(coin.error))
