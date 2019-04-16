@@ -39,24 +39,23 @@ class CoinDevice(object):
         # also reversing pmask probably due to emp-specific order issue
         self.pmask = list(reversed([sum(_) for _ in zip(*self.pmasks)]))
 
-    def __call__(self):
-        self.cc_messenger.reset_device()
-        self.cc_messenger.master_inhibit(False)
-        self.cc_messenger.accept_coins(self.pmask)
-
     def __iter__(self):
         self.cc_messenger.reset_device()
         self.cc_messenger.master_inhibit(False)
         self.cc_messenger.accept_coins(self.pmask)
 
-        last_event = 0
+        last_event = None
         capa_event = 5
 
-        while True:
+        while self.cc_messenger.simple_poll():
             time.sleep(self.timeout)
 
             buff_event = self.cc_messenger.read_buffer()
             coin_event = buff_event.pop(0)
+
+            if not coin_event or last_event is None:
+                last_event = coin_event
+                continue
 
             if last_event > coin_event:
                 last_event -= 255
