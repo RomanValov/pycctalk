@@ -1,0 +1,49 @@
+#!/usr/bin/python
+# -*- mode: python -*-
+
+from __future__ import print_function
+
+"""
+Script to demonstrate coin device functions.
+"""
+# The python-cctalk package allows one to send ccTalk messages and decode replies from a ccTalk device.
+license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
+__copyright__ = license_text
+
+import sys
+from cctalk.devices import CoinDevice
+
+sys.argv.pop(0)
+
+device_name = sys.argv.pop(0) if sys.argv else None
+if not device_name:
+    device_name = '/dev/ttyUSB0'
+
+format_spec = sys.argv.pop(0) if sys.argv else None
+if not format_spec:
+    format_spec = 'index = {i:4} / value = {v:4} / worth = {w:>6} / error = {e:4}'
+
+coin_worths = dict()
+
+# use worths dict to translate coin labels
+# in worths values and mask other coins
+if not sys.stdin.isatty():
+    for line in sys.stdin.readlines():
+        if not line.strip():
+            continue
+
+        key, value = line.split()
+
+        coin_worths[key] = value
+
+coin_device = CoinDevice(device_name, worths=(coin_worths or None))
+
+for coin in coin_device:
+    sys.stdout.write(format_spec.format(
+        i=coin.index,
+        v=coin.value,
+        w=coin.worth,
+        e=coin.error,
+    ))
+    sys.stdout.write('\n')
+    sys.stdout.flush()

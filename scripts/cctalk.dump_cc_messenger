@@ -10,14 +10,20 @@ Script to demonstrate cc_messenger functions.
 license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
 __copyright__ = license_text
 
+import sys
 from cctalk.messenger import CCMessenger
-import time
+
+sys.argv.pop(0)
+
+device_name = sys.argv.pop(0) if sys.argv else None
+if not device_name:
+    device_name = '/dev/ttyUSB0'
 
 # verbosity levels up to 3
 verbose_coin_id=0
 verbose_default=0
 
-cc_messenger = CCMessenger('/dev/ttyUSB0', verbose=verbose_default)
+cc_messenger = CCMessenger(device_name, verbose=verbose_default)
 
 def test_iface(cc_messenger):
     error = 0
@@ -140,7 +146,7 @@ def dump_coins(cc_messenger):
         spath = cc_messenger.sorter_path([_])
         pmask = cc_messenger.coin_position([_])
 
-        print('\t%2s:\t%s\t%s\t%s' % (_, idstr, spath, pmask))
+        print('\t{:2}:\t{}\t{}\t{}'.format(_, idstr, spath, pmask))
     print()
 
 
