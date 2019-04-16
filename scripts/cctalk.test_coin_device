@@ -14,5 +14,5 @@ from cctalk.devices import CoinDevice
 
 coin_device = CoinDevice('/dev/ttyUSB0')
 
-for index, value, label, error in coin_device:
-    print('index = %4s / value = %4s / label = %6s / error = %4s' % (index, value, label, error))
+for coin in coin_device:
+    print('index = %4s / value = %4s / label = %6s / error = %4s' % (coin.index, coin.value, coin.label, coin.error))

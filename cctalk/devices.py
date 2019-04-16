@@ -5,8 +5,14 @@
 license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
 __copyright__ = license_text
 
-from cctalk.messenger import CCMessenger
+from collections import namedtuple
 import time
+
+from cctalk.messenger import CCMessenger
+
+
+CoinStruct = namedtuple('CoinStruct', ['index', 'value', 'label', 'error'])
+
 
 class CoinDevice(object):
     def __init__(self, serial_object, timeout=0.1, verbose=0, suppress=None):
@@ -48,6 +54,11 @@ class CoinDevice(object):
                 coin_error = buff_event[2*_-1]
                 coin_label = self.coin_id[coin_value]
 
-                yield coin_index, coin_value, coin_label, coin_error
+                yield CoinStruct(
+                    coin_index,
+                    coin_value,
+                    coin_label,
+                    coin_error
+                )
 
             last_event = coin_event
