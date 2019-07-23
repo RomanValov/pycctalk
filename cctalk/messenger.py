@@ -64,7 +64,7 @@ class CCMessenger(object):
                     read_opto_states=(236,2,int),
                     read_input_lines=(237,6,int),
                     test_output_lines=(238,0,bool),
-                    test_solenoids=(240,1,int),
+                    test_solenoids=(240,-1,int),
                     software_revision=(241,-1,str),
                     serial_number=(242,3,int),
                     database_version=(243,1,int),

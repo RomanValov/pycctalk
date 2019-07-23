@@ -60,28 +60,33 @@ def _read_message(serial_object, slave, host, verbose):
     # header: destination, length, source, message_id
 
     try:
-        read_length = head[1]+1
+        read_length = head[1]
     except IndexError:
         read_length = 0
 
     body = bytearray(serial_object.read(read_length))
-    recv = head + body
+    csum = bytearray(serial_object.read(1))
+
+    recv = head + body + csum
 
     if verbose > 1:
         print("Recv {0} bytes: {1}".format(len(recv), list(recv)))
 
-    if len(recv) < 5:
-        raise IOError("Reply head is too short.")
+    if len(head) < 4:
+        raise IOError("Reply head is too short: {0}.".format(len(head)))
 
     if head[0] != host or head[2] != slave:
         raise IOError("Unexpected addresses.")
 
     if len(body) < read_length:
-        raise IOError("Reply body is too short.")
+        raise IOError("Reply body is too short: {0}.".format(len(body)))
+
+    if not csum and read_length:
+        raise IOError("Checksum for {0} bytes empty.".format(len(csum)))
 
     # TODO: check checksum
 
-    return head[3], body[:-1]
+    return head[3], body
 
 
 def send_message_and_get_reply(serial_object, code, data=None, slave=2, host=1, verbose=False):
