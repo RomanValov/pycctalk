@@ -15,8 +15,9 @@ CoinStruct = namedtuple('CoinStruct', ['index', 'value', 'worth', 'error'])
 
 
 class CoinDevice(object):
-    def __init__(self, serial_object, worths=None, timeout=0.1, verbose=0, suppress=None):
+    def __init__(self, serial_object, gate_status=None, worths=None, timeout=0.1, verbose=0, suppress=None):
         self.cc_messenger = CCMessenger(serial_object, verbose=verbose, suppress=suppress)
+        self.gate_status = gate_status if gate_status else lambda: False
         self.timeout = timeout
 
         self.worths = worths
@@ -40,7 +41,6 @@ class CoinDevice(object):
         self.pmask = list(reversed([sum(_) for _ in zip(*self.pmasks)]))
 
         self.cc_messenger.reset_device()
-        self.cc_messenger.master_inhibit(False)
         self.cc_messenger.accept_coins(self.pmask)
 
     def __iter__(self):
@@ -49,6 +49,8 @@ class CoinDevice(object):
 
         while self.cc_messenger.simple_poll():
             time.sleep(self.timeout)
+
+            self.cc_messenger.master_inhibit(self.gate_status())
 
             buff_event = self.cc_messenger.read_buffer()
             coin_event = buff_event.pop(0)

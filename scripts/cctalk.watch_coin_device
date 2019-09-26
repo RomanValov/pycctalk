@@ -11,6 +11,7 @@ license_text = "(C) 2011-2019 David Schryer and others GNU GPLv3 or later."
 __copyright__ = license_text
 
 import sys
+import subprocess
 from cctalk.devices import CoinDevice
 
 sys.argv.pop(0)
@@ -22,6 +23,10 @@ if not device_name:
 format_spec = sys.argv.pop(0) if sys.argv else None
 if not format_spec:
     format_spec = 'index = {i:4} / value = {v:4} / worth = {w:>6} / error = {e:4}'
+
+gate_status = sys.argv.pop(0) if sys.argv else None
+if gate_status:
+    gate_status = lambda gate_status=gate_status: bool(subprocess.call(gate_status, shell=True))
 
 coin_worths = dict()
 
@@ -36,7 +41,7 @@ if not sys.stdin.isatty():
 
         coin_worths[key] = value
 
-coin_device = CoinDevice(device_name, worths=(coin_worths or None))
+coin_device = CoinDevice(device_name, gate_status=gate_status, worths=(coin_worths or None))
 
 while coin_device:
     for coin in coin_device:
